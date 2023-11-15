@@ -1,66 +1,111 @@
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
+from os.path import join as path_join
 
+class Constants:
+    SHORT_TERM = 12
+    LONG_TERM = 26
+    SIGNAL_PERIOD = 9
+    RSI_PERIOD = 14
+    ATR_PERIOD = 14
 
-
-#  there are simple methods to calculate the technical indicators
-#  for all other columns we have the data in the csv file
-
-
-
+class DataSources:
+    DATA_DIR = "data"
+    HISTORICAL_OC = path_join(DATA_DIR, "HistoricalData.csv")
+    EFFR = path_join(DATA_DIR, "EFFR.csv")
+    VIX = path_join(DATA_DIR, "VIX.csv")
+    DX = path_join(DATA_DIR, "DX-Y.NYB.csv")
+    UNRATE = path_join(DATA_DIR, "UNRATE.csv")
+    UMCSENT = path_join(DATA_DIR, "UMCSENT.csv")
+    
 def calculate_macd(df):
-    # techinical indicator 
-    short_term = 12
-    long_term = 26
-    signal_period = 9
-
-    df['EMA12'] = df['Close/Last'].ewm(span=short_term,adjust=False).mean()
-    df['EMA26'] = df['Close/Last'].ewm(span=long_term,adjust=False).mean()
+    # technical indicator 
+    df['EMA12'] = df['Close'].ewm(span=Constants.SHORT_TERM,adjust=False).mean()
+    df['EMA26'] = df['Close'].ewm(span=Constants.LONG_TERM,adjust=False).mean()
 
     df['MACD Line'] = df['EMA12'] - df['EMA26']
-    df['Signal Line'] = df['MACD Line'].ewm(span=signal_period,adjust=False).mean()
+    df['Signal Line'] = df['MACD Line'].ewm(span=Constants.SIGNAL_PERIOD,adjust=False).mean()
     df['MACD'] = df['MACD Line'] - df['Signal Line']
     df.drop(['EMA12','EMA26','MACD Line','Signal Line'],inplace=True,axis=1)
     return df
 
-def calucate_atr(data):
-    # techinical indicator 
-    atr_period = 14
+def calculate_atr(data):
+    # technical indicator 
     data['H-L'] = data['High'] - data['Low']
-    data['H-PC'] = (data['High'] - data['Close/Last'].shift(1)).abs()
-    data['L-PC'] = (data['Low'] - data['Close/Last'].shift(1)).abs()
+    data['H-PC'] = (data['High'] - data['Close'].shift(1)).abs()
+    data['L-PC'] = (data['Low'] - data['Close'].shift(1)).abs()
 
     data['TR'] = data[['H-L','H-PC','L-PC']].max(axis=1)
 
-    data['ATR'] = data['TR'].rolling(atr_period).mean()
+    data['ATR'] = data['TR'].rolling(Constants.ATR_PERIOD).mean()
     data.drop(['H-L','H-PC','L-PC','TR'],inplace=True,axis=1)
     return data
 
 def calculate_rsi(data):
-    # techinical indicator 
-    rsi_period = 14
-    data['Price Change'] = data['Close/Last'].diff()
+    # technical indicator 
+    data['Price Change'] = data['Close'].diff()
     data['Gain'] = data['Price Change'].apply(lambda x: x if x > 0 else 0)
     data['Loss'] = data['Price Change'].apply(lambda x: -x if x < 0 else 0)
-    data['Average Gain'] = data['Gain'].rolling(window = rsi_period).mean()
-    data['Average Loss'] = data['Loss'].rolling(window = rsi_period).mean()
+    data['Average Gain'] = data['Gain'].rolling(window = Constants.RSI_PERIOD).mean()
+    data['Average Loss'] = data['Loss'].rolling(window = Constants.RSI_PERIOD).mean()
     data['Relative Strength'] = data['Average Gain']/data['Average Loss']
     data['RSI'] = 100 - (100/(1+data['Relative Strength']))
 
     data.drop(['Price Change','Gain','Loss','Average Gain','Average Loss','Relative Strength'],inplace=True,axis=1)
 
     return data
-    pass
 
 
 def get_data(path):
     df = pd.read_csv(path)
-    df.Date = df['Date'].apply(lambda x: pd.to_datetime(x,format="%m/%d/%Y"))
+    df.Date = df['Date'].apply(lambda x: pd.to_datetime(x,format="%m/%d/%y"))
     return df
 
+def calculate_whole(data_df, path, date_format):
+    df_add = pd.read_csv(path)
+    # print(df_add)
+    df_add.Date = df_add['Date'].apply(lambda x: pd.to_datetime(x,format=date_format))
+    merged_df = pd.merge_ordered(data_df, df_add, on='Date', how='left')
+    return merged_df
+
+
+def calculate_column(data_df, path, date_format, feature):
+    df_add = pd.read_csv(path)
+    # print(df_add)
+    df_add.Date = df_add['Date'].apply(lambda x: pd.to_datetime(x,format=date_format))
+    column = "Adj Close"
+    merged_df = pd.merge_ordered(data_df, df_add[['Date', column]], on='Date', how='left')
+    merged_df.rename(columns={column: feature}, inplace=True)
+    return merged_df
+
+def calculate_monthly(data_df, path, date_format):
+    df_add = pd.read_csv(path)
+    # print(df_add)
+    # df_add.Date = df_add['DATE'].apply(lambda x: pd.to_datetime(x,format=date_format))
+    df_add['Date'] = pd.to_datetime(df_add['DATE']).dt.to_period('M').dt.to_timestamp()
+    df_add['YearMonth'] = df_add['Date'].dt.to_period('M')
+    data_df['YearMonth'] = data_df['Date'].dt.to_period('M')
+    # print(data_df)
+    merged_df = pd.merge_ordered(data_df, df_add, left_on='YearMonth', right_on='YearMonth', how='left')
+    merged_df.drop(['YearMonth', 'DATE', 'Date_y'], axis=1, inplace=True)
+    merged_df.rename(columns={'Date_x': 'Date'}, inplace=True)
+    return merged_df
+
+def prepareFinalDataset(final_name="final_dataset.csv"):
+    df = get_data(DataSources.HISTORICAL_OC)
+
+    # Technical Indicators
+    df = calculate_macd(df)             # Moving Average Convergence Divergence
+    df = calculate_atr(df)              # Market Volatility
+    df = calculate_rsi(df)              # Relative Strength Index
+
+    df = calculate_whole(df, DataSources.EFFR, date_format = "%d-%m-%Y")
+    df = calculate_column(df, DataSources.VIX, date_format = "%d-%m-%Y", feature = "VIX" )
+    df = calculate_column(df, DataSources.DX, date_format = "%Y-%m-%d", feature = "USDX" )
+    df = calculate_monthly(df, DataSources.UNRATE, date_format = "%Y-%m-%d")
+    df = calculate_monthly(df, DataSources.UMCSENT, date_format = "%Y-%m-%d")
+    df['Date'] = df['Date'].apply(lambda x: x.strftime('%d-%m-%Y'))
+    df.to_csv(path_join(DataSources.DATA_DIR, final_name),index=False)
+
 if __name__ == "__main__":
-    df = get_data("../data/HistoricalData_1698863282356.csv")
-    df = calculate_macd(df)
-    df = calucate_atr(df)
-    df = calculate_rsi(df)
-    df.to_csv("../data/final_dataset.csv",index=False)
+    prepareFinalDataset()
