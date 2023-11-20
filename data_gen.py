@@ -91,6 +91,26 @@ def calculate_monthly(data_df, path, date_format):
     merged_df.rename(columns={'Date_x': 'Date'}, inplace=True)
     return merged_df
 
+
+def refine_data(data_df):
+    # iterate through the columns EEFR, VIX, USDX, UNRATE, UMCSENT
+    for i in range(1, len(data_df)):
+        for column in data_df.columns:
+            if column == 'Date':
+                continue
+            else:
+                try:
+                    temp = float(data_df[column][i])
+                except:
+                    # print("Error: ", data_df[column][i])
+                    # if(i == 0): data_df[column][i] = 0
+                    # else: data_df[column][i] = data_df[column][i-1]
+                    # use iloc operation for the above lines
+                    if(i == 0): data_df.iloc[i, data_df.columns.get_loc(column)] = 0
+                    else:   data_df.iloc[i, data_df.columns.get_loc(column)] = data_df.iloc[i-1, data_df.columns.get_loc(column)]
+    return data_df
+
+            
 def prepareFinalDataset(final_name="final_dataset.csv"):
     df = get_data(DataSources.HISTORICAL_OC)
 
@@ -105,6 +125,7 @@ def prepareFinalDataset(final_name="final_dataset.csv"):
     df = calculate_monthly(df, DataSources.UNRATE, date_format = "%Y-%m-%d")
     df = calculate_monthly(df, DataSources.UMCSENT, date_format = "%Y-%m-%d")
     df['Date'] = df['Date'].apply(lambda x: x.strftime('%d-%m-%Y'))
+    df = refine_data(df)
     df.to_csv(path_join(DataSources.DATA_DIR, final_name),index=False)
 
 if __name__ == "__main__":
