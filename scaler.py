@@ -10,14 +10,14 @@ class StandardScalerLSTM():
         scale (FloatTensor): Per-feature relative scaling.
     """
 
-    def __init__(self, batch_size, sequence_length, feature_size):
+    def __init__(self, batch_size, sequence_length, feature_size,device):
 
         self.mean_ = None # shape = (1, feature_size)
         self.scale_ = None # shape = (1, feature_size)
         self.batch_size = batch_size
         self.sequence_length = sequence_length
         self.feature_size = feature_size
-
+        self.device = device
 
     def fit(self, sample):
         """Set the mean and scale values based on the sample data.
@@ -30,8 +30,8 @@ class StandardScalerLSTM():
         # print("mean",self.mean_.shape)
         # print("scale",self.scale_.shape)
 
-        self.scale_ = torch.from_numpy(self.scale_).float().unsqueeze(0)
-        self.mean_ = torch.from_numpy(self.mean_).float().unsqueeze(0)
+        self.scale_ = torch.from_numpy(self.scale_).float().unsqueeze(0).to(self.device)
+        self.mean_ = torch.from_numpy(self.mean_).float().unsqueeze(0).to(self.device)
         return self
 
     def __call__(self, sample):
