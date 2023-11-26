@@ -47,4 +47,6 @@ class StandardScalerLSTM():
         # print("prediction",sample.shape)
         # print("self.scale_",self.scale_.shape) # (feature_size,)
         # print("self.mean_",self.scale_.shape) # (feature_size,)
+
+        # FIXME: A possible bug, when the first element is not the output of the model
         return sample * self.scale_[0][0] + self.mean_[0][0]
