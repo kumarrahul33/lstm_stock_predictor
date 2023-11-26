@@ -10,13 +10,12 @@ class StandardScalerLSTM():
         scale (FloatTensor): Per-feature relative scaling.
     """
 
-    def __init__(self, batch_size, sequence_length, feature_size,device):
+    def __init__(self, batch_size, sequence_length, device):
 
         self.mean_ = None # shape = (1, feature_size)
         self.scale_ = None # shape = (1, feature_size)
         self.batch_size = batch_size
         self.sequence_length = sequence_length
-        self.feature_size = feature_size
         self.device = device
 
     def fit(self, sample):

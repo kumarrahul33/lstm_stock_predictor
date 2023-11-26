@@ -62,23 +62,23 @@ def addData(data_df, path, date_format):
     merged_df = pd.merge_ordered(data_df, df_add, on='Date', how='left')
     return merged_df
 
-# def refine_data(data_df):
-#     # iterate through the columns EEFR, VIX, USDX, UNRATE, UMCSENT
-#     for i in range(1, len(data_df)):
-#         for column in data_df.columns:
-#             if column == 'Date':
-#                 continue
-#             else:
-#                 try:
-#                     temp = float(data_df[column][i])
-#                 except:
-#                     # print("Error: ", data_df[column][i])
-#                     # if(i == 0): data_df[column][i] = 0
-#                     # else: data_df[column][i] = data_df[column][i-1]
-#                     # use iloc operation for the above lines
-#                     if(i == 0): data_df.iloc[i, data_df.columns.get_loc(column)] = 0
-#                     else:   data_df.iloc[i, data_df.columns.get_loc(column)] = data_df.iloc[i-1, data_df.columns.get_loc(column)]
-#     return data_df
+def refine_data(data_df):
+    # iterate through the columns EEFR, VIX, USDX, UNRATE, UMCSENT
+    for i in range(1, len(data_df)):
+        for column in data_df.columns:
+            if column == 'Date':
+                continue
+            else:
+                try:
+                    temp = float(data_df[column][i])
+                except:
+                    # print("Error: ", data_df[column][i])
+                    # if(i == 0): data_df[column][i] = 0
+                    # else: data_df[column][i] = data_df[column][i-1]
+                    # use iloc operation for the above lines
+                    if(i == 0): data_df.iloc[i, data_df.columns.get_loc(column)] = 0
+                    else:   data_df.iloc[i, data_df.columns.get_loc(column)] = data_df.iloc[i-1, data_df.columns.get_loc(column)]
+    return data_df
 
 def calculate_monthly(data_df, path, date_format):
     df_add = pd.read_csv(path)
@@ -102,8 +102,14 @@ def prepareFinalDataset(final_name="final_dataset.csv"):
     df = computeRsi(df)
     df.drop(['Open','High','Low'],inplace=True,axis=1)
 
-    df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%d-%m-%Y")
+    # df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%d-%m-%Y")
+    df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%Y-%m-%d")
+    if("EEFR" in df.columns):
+        # drop the row where EEFR is NaN
+        df.dropna(subset=['EEFR'], inplace=True)
     df['Date'] = df['Date'].apply(lambda x: x.strftime('%d-%m-%Y'))
+    df = df.drop(['Date'], axis=1)
+    df = refine_data(df)
 
     df.to_csv(path_join(DataSources.DATA_DIR, final_name),index=False)
 
