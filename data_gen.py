@@ -13,6 +13,7 @@ class DataSources:
     DATA_DIR = "data"
     SP500_OHLC = path_join(DATA_DIR, "sp500_ohlc.csv")
     US_MACROECONOMIC = path_join(DATA_DIR, "us_macro.csv")
+    IND_MACROECONOMIC = path_join(DATA_DIR, "ind_macro.csv")
 
 def loadOhlc(path, date_format="%m/%d/%y"):
     df = pd.read_csv(path)
@@ -79,6 +80,18 @@ def addData(data_df, path, date_format):
 #                     else:   data_df.iloc[i, data_df.columns.get_loc(column)] = data_df.iloc[i-1, data_df.columns.get_loc(column)]
 #     return data_df
 
+def calculate_monthly(data_df, path, date_format):
+    df_add = pd.read_csv(path)
+    # print(df_add)
+    # df_add.Date = df_add['DATE'].apply(lambda x: pd.to_datetime(x,format=date_format))
+    df_add['Date'] = pd.to_datetime(df_add['DATE']).dt.to_period('M').dt.to_timestamp()
+    df_add['YearMonth'] = df_add['Date'].dt.to_period('M')
+    data_df['YearMonth'] = data_df['Date'].dt.to_period('M')
+    # print(data_df)
+    merged_df = pd.merge_ordered(data_df, df_add, left_on='YearMonth', right_on='YearMonth', how='left')
+    merged_df.drop(['YearMonth', 'DATE', 'Date_y'], axis=1, inplace=True)
+    merged_df.rename(columns={'Date_x': 'Date'}, inplace=True)
+    return merged_df
 
 def prepareFinalDataset(final_name="final_dataset.csv"):
     df = loadOhlc(DataSources.SP500_OHLC, date_format="%m/%d/%y")

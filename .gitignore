@@ -1,5 +1,4 @@
 *.pyc
 __pycache__
-data/.archive/
-data/india_vix/
 files/
+data/.archive/
