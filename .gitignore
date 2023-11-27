@@ -2,3 +2,5 @@
 __pycache__
 files/
 data/.archive/
+
+*.pth

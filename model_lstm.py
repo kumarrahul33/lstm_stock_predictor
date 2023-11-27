@@ -46,6 +46,17 @@ class PricePredictor(nn.Module):
         predictions = self.linear(output[:,-1,:].squeeze()) # N x output_size
         predictions = self.scaler.inverse_transform(predictions)
         return predictions
+    
+    def hidden_predict(self, input_seq):
+        if self.cell_double[0].shape[1] != 1:
+            # self.cell_double = (torch.zeros(1,1,self.hidden_layer_size,requires_grad=False).to(device), torch.zeros(1,1,self.hidden_layer_size,requires_grad=False).to(device))
+             self.cell_double = (torch.zeros(1,1,self.hidden_layer_size,requires_grad=False), torch.zeros(1,1,self.hidden_layer_size,requires_grad=False))
+        output, self.cell_double = self.lstm(input_seq, self.cell_double)
+        output = self.ReLU(output)
+        self.cell_double = (self.cell_double[0].detach(),self.cell_double[1].detach())
+        predictions = self.linear(output[:,-1,:].squeeze()) # N x output_size
+        predictions = self.scaler.inverse_transform(predictions)
+        return predictions, self.cell_double[0]
 
 
 # ====================== Training ========================
