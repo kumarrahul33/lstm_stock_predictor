@@ -12,7 +12,7 @@ from model_lstm import PricePredictor, Traning
 
 SEQ_LEN = 8
 BATCH_SIZE = 16
-FEATURE_SIZE = 9 
+FEATURE_SIZE = 9
 
 # Check if CUDA (GPU support) is available
 # device = 'cpu'
@@ -24,7 +24,7 @@ FEATURE_SIZE = 9
 # ================================data processing===============================
 
 def get_minmax(device):
-    data_df = pd.read_csv("data/final_dataset.csv")
+    data_df = pd.read_csv("data/final_dataset_us.csv")
     data = np.nan_to_num(np.array(data_df, dtype=np.float32))
 
     minmax_scaler = StandardScalerLSTM(batch_size=BATCH_SIZE, sequence_length=SEQ_LEN, device=device)
@@ -42,61 +42,68 @@ def create_sequence(data,seq_len):
         ys.append(y)
     return np.array(xs),np.array(ys)
 
-# inputs , targets = create_sequence(data,SEQ_LEN)
-# inputs=torch.from_numpy(inputs)
-# targets=torch.from_numpy(targets)
+# def create_plo(data):
+#     seq_len = 1
+#     xs = []
+#     ys = []
+#     for i in range(len(data)-seq_len-1):
+#         x = data[i:(i+seq_len),:]
+#         # print(x.shape)
+#         y = data[i+seq_len,0]
+#         xs.append(x)
+#         ys.append(y)
+#     return np.array(xs),np.array(ys)
 
 
-# split the input data into train and test data
-# train_size = int(0.9 * len(inputs))
-# test_size = len(inputs) - train_size
-# train_inputs, test_inputs = inputs[:train_size], inputs[train_size:]
-# train_targets, test_targets = targets[:train_size], targets[train_size:]
-# print(train_inputs.shape, test_inputs.shape)
 
-
-# ====================== Data Loader ========================
-# train_dataset = TensorDataset(train_inputs, train_targets)
-# test_dataset = TensorDataset(test_inputs, test_targets)
-
-# train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=False)
-# test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-# model = PricePredictor(minmax_scaler,BATCH_SIZE,device=device).to(device)
-
-# # loss_function = nn.L1Loss()
-# # optimizer = torch.optim.Adagrad(model.parameters(), lr=0.0001)
-# optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
-# epochs = 80
-
-def make_loaders():
-    data_df = pd.read_csv("data/final_dataset.csv")
+def make_loaders(batch_size=BATCH_SIZE,seq_len=SEQ_LEN,splits=[.7,.15]):
+    data_df = pd.read_csv("data/final_dataset_us.csv")
     data = np.nan_to_num(np.array(data_df, dtype=np.float32))
 
-    inputs , targets = create_sequence(data,SEQ_LEN)
+    inputs , targets = create_sequence(data,seq_len=seq_len)
     inputs=torch.from_numpy(inputs)
     targets=torch.from_numpy(targets)
 
-    train_size = int(0.9 * len(inputs))
-    test_size = len(inputs) - train_size
-    train_inputs, test_inputs = inputs[:train_size], inputs[train_size:]
-    train_targets, test_targets = targets[:train_size], targets[train_size:]
+    train_size = int(splits[0] * len(inputs))
+    val_size =  int(train_size + splits[1] * len(inputs))
+    train_inputs, val_inputs, test_inputs= inputs[:train_size], inputs[train_size:val_size], inputs[val_size:]
+    train_targets, val_targets, test_targets = targets[:train_size], targets[train_size:val_size], targets[val_size:]
 
     # ====================== Data Loader ========================
     train_dataset = TensorDataset(train_inputs, train_targets)
     test_dataset = TensorDataset(test_inputs, test_targets)
+    val_dataset = TensorDataset(val_inputs, val_targets)
 
-    train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
 
     
 if __name__ == "__main__":
     # ask for the model name in key args
-    name = input("Enter the model name: ") 
-    trainer = Traning(model, loss_function, optimizer, train_loader, test_loader, epochs=epochs,device=device)
-    trainer.train()
-    trainer.test()
-    trainer.save(name)
+    if(torch.cuda.is_available()):
+        device = 'cuda'
+    else:
+        device = 'cpu'
+    minmax_scaler = get_minmax(device)
+
+    loss_function = nn.MSELoss()
+
+    # train_loader,test_loader = make_loaders()
+    # Experiment : 1
+    for seq_len in [1,4,8.16]:
+        for tr in [True,False]:
+            model = PricePredictor(minmax_scaler,BATCH_SIZE,train_remember=tr,device=device,input_size=FEATURE_SIZE).to(device)
+            train_loader,val_loader,_= make_loaders(batch_size=BATCH_SIZE,seq_len=1)
+            _,_,test_plot_loader= make_loaders(batch_size=1,seq_len=1)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+            epochs = 80
+
+            name = "model_"+str(seq_len)+"_"+str(tr)
+            trainer = Traning(model, loss_function, optimizer, train_loader, val_loader,test_plot_loader,name=name, epochs=epochs,device=device)
+            trainer.train()
+            trainer.test()
+            trainer.save_losses()
 

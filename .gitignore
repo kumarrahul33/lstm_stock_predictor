@@ -2,5 +2,6 @@
 __pycache__
 files/
 data/.archive/
-
+*.png
+results/
 *.pth

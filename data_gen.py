@@ -12,6 +12,7 @@ class Constants:
 class DataSources:
     DATA_DIR = "data"
     SP500_OHLC = path_join(DATA_DIR, "sp500_ohlc.csv")
+    NIFTY50_OHLC = path_join(DATA_DIR, "nifty50_ohlc.csv")
     US_MACROECONOMIC = path_join(DATA_DIR, "us_macro.csv")
     IND_MACROECONOMIC = path_join(DATA_DIR, "ind_macro.csv")
 
@@ -93,7 +94,8 @@ def calculate_monthly(data_df, path, date_format):
     merged_df.rename(columns={'Date_x': 'Date'}, inplace=True)
     return merged_df
 
-def prepareFinalDataset(final_name="final_dataset.csv"):
+def prepareFinalDataset(final_name="final_dataset_us.csv"):
+    # df = loadOhlc(DataSources.NIFTY50_OHLC, date_format="%Y-%m-%d")
     df = loadOhlc(DataSources.SP500_OHLC, date_format="%m/%d/%y")
 
     # Technical Indicators
@@ -102,8 +104,8 @@ def prepareFinalDataset(final_name="final_dataset.csv"):
     df = computeRsi(df)
     df.drop(['Open','High','Low'],inplace=True,axis=1)
 
-    # df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%d-%m-%Y")
     df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%Y-%m-%d")
+    # df = addData(df, DataSources.IND_MACROECONOMIC, date_format = "%d-%m-%Y")
     if("EEFR" in df.columns):
         # drop the row where EEFR is NaN
         df.dropna(subset=['EEFR'], inplace=True)
