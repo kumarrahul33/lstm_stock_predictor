@@ -93,15 +93,15 @@ if __name__ == "__main__":
 
     # train_loader,test_loader = make_loaders()
     # Experiment : 1
-    for seq_len in [1,4,8.16]:
-        for tr in [True,False]:
+    for seq_len in [1]:
+        for tr in [False]:
             model = PricePredictor(minmax_scaler,BATCH_SIZE,train_remember=tr,device=device,input_size=FEATURE_SIZE).to(device)
             train_loader,val_loader,_= make_loaders(batch_size=BATCH_SIZE,seq_len=1)
             _,_,test_plot_loader= make_loaders(batch_size=1,seq_len=1)
             optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-            epochs = 80
+            epochs = 300
 
-            name = "model_"+str(seq_len)+"_"+str(tr)
+            name = "model_"+str(seq_len)+"_"+str(tr)+"_"+str(BATCH_SIZE)
             trainer = Traning(model, loss_function, optimizer, train_loader, val_loader,test_plot_loader,name=name, epochs=epochs,device=device)
             trainer.train()
             trainer.test()

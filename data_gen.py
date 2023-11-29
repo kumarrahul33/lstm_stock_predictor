@@ -63,36 +63,32 @@ def addData(data_df, path, date_format):
     merged_df = pd.merge_ordered(data_df, df_add, on='Date', how='left')
     return merged_df
 
-def refine_data(data_df):
+def toFloat(x):
+    try:return float(x)
+    except:return 0
+def refineData(data_df: pd.DataFrame):
     # iterate through the columns EEFR, VIX, USDX, UNRATE, UMCSENT
-    for i in range(1, len(data_df)):
-        for column in data_df.columns:
-            if column == 'Date':
-                continue
-            else:
-                try:
-                    temp = float(data_df[column][i])
-                except:
-                    # print("Error: ", data_df[column][i])
-                    # if(i == 0): data_df[column][i] = 0
-                    # else: data_df[column][i] = data_df[column][i-1]
-                    # use iloc operation for the above lines
-                    if(i == 0): data_df.iloc[i, data_df.columns.get_loc(column)] = 0
-                    else:   data_df.iloc[i, data_df.columns.get_loc(column)] = data_df.iloc[i-1, data_df.columns.get_loc(column)]
+    data_df.drop(['Date'], axis=1, inplace=True, errors='ignore')
+    data_df = data_df.applymap(lambda x: toFloat(x))
+    data_df.fillna(0, inplace=True)
+
     return data_df
 
-def calculate_monthly(data_df, path, date_format):
-    df_add = pd.read_csv(path)
-    # print(df_add)
-    # df_add.Date = df_add['DATE'].apply(lambda x: pd.to_datetime(x,format=date_format))
+def calculate_monthly(data_df, df_add):
     df_add['Date'] = pd.to_datetime(df_add['DATE']).dt.to_period('M').dt.to_timestamp()
     df_add['YearMonth'] = df_add['Date'].dt.to_period('M')
     data_df['YearMonth'] = data_df['Date'].dt.to_period('M')
-    # print(data_df)
     merged_df = pd.merge_ordered(data_df, df_add, left_on='YearMonth', right_on='YearMonth', how='left')
     merged_df.drop(['YearMonth', 'DATE', 'Date_y'], axis=1, inplace=True)
     merged_df.rename(columns={'Date_x': 'Date'}, inplace=True)
     return merged_df
+def combineMonthly(pathin1, pathin2, outpath="dataset_combined.csv"):
+    df1 = pd.read_csv(pathin1); df2 = pd.read_csv(pathin2)
+    df1['Date'] = df1['Date'].apply(lambda x: pd.to_datetime(x)); df2['Date'] = df2['Date'].apply(lambda x: pd.to_datetime(x))
+
+    df = calculate_monthly(df1, df2)
+
+    df.to_csv(outpath, index=False)
 
 def prepareFinalDataset(final_name="final_dataset_us.csv"):
     # df = loadOhlc(DataSources.NIFTY50_OHLC, date_format="%Y-%m-%d")
@@ -105,13 +101,7 @@ def prepareFinalDataset(final_name="final_dataset_us.csv"):
     df.drop(['Open','High','Low'],inplace=True,axis=1)
 
     df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%Y-%m-%d")
-    # df = addData(df, DataSources.IND_MACROECONOMIC, date_format = "%d-%m-%Y")
-    if("EEFR" in df.columns):
-        # drop the row where EEFR is NaN
-        df.dropna(subset=['EEFR'], inplace=True)
-    df['Date'] = df['Date'].apply(lambda x: x.strftime('%d-%m-%Y'))
-    df = df.drop(['Date'], axis=1)
-    df = refine_data(df)
+    df = refineData(df)
 
     df.to_csv(path_join(DataSources.DATA_DIR, final_name),index=False)
 
