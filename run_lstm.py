@@ -12,7 +12,8 @@ from model_lstm import PricePredictor, Traning
 
 SEQ_LEN = 8
 BATCH_SIZE = 16
-FEATURE_SIZE = 9
+FEATURE_SIZE = 8
+DATASET_PATH = "data/final_dataset_ind_mod.csv"
 
 # Check if CUDA (GPU support) is available
 # device = 'cpu'
@@ -24,7 +25,7 @@ FEATURE_SIZE = 9
 # ================================data processing===============================
 
 def get_minmax(device):
-    data_df = pd.read_csv("data/final_dataset_us.csv")
+    data_df = pd.read_csv(DATASET_PATH)
     data = np.nan_to_num(np.array(data_df, dtype=np.float32))
 
     minmax_scaler = StandardScalerLSTM(batch_size=BATCH_SIZE, sequence_length=SEQ_LEN, device=device)
@@ -57,7 +58,7 @@ def create_sequence(data,seq_len):
 
 
 def make_loaders(batch_size=BATCH_SIZE,seq_len=SEQ_LEN,splits=[.7,.15]):
-    data_df = pd.read_csv("data/final_dataset_us.csv")
+    data_df = pd.read_csv(DATASET_PATH)
     data = np.nan_to_num(np.array(data_df, dtype=np.float32))
 
     inputs , targets = create_sequence(data,seq_len=seq_len)
@@ -93,17 +94,29 @@ if __name__ == "__main__":
 
     # train_loader,test_loader = make_loaders()
     # Experiment : 1
-    for seq_len in [1]:
-        for tr in [False]:
-            model = PricePredictor(minmax_scaler,BATCH_SIZE,train_remember=tr,device=device,input_size=FEATURE_SIZE).to(device)
-            train_loader,val_loader,_= make_loaders(batch_size=BATCH_SIZE,seq_len=1)
-            _,_,test_plot_loader= make_loaders(batch_size=1,seq_len=1)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-            epochs = 300
+    # for seq_len in [1]:
+    #     for tr in [False]:
+    #         model = PricePredictor(minmax_scaler,BATCH_SIZE,train_remember=tr,device=device,input_size=FEATURE_SIZE).to(device)
+    #         train_loader,val_loader,_= make_loaders(batch_size=BATCH_SIZE,seq_len=8)
+    #         _,_,test_plot_loader= make_loaders(batch_size=1,seq_len=1)
+    #         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    #         epochs = 300
 
-            name = "model_"+str(seq_len)+"_"+str(tr)+"_"+str(BATCH_SIZE)
-            trainer = Traning(model, loss_function, optimizer, train_loader, val_loader,test_plot_loader,name=name, epochs=epochs,device=device)
-            trainer.train()
-            trainer.test()
-            trainer.save_losses()
+    #         name = "model_"
+    #         trainer = Traning(model, loss_function, optimizer, train_loader, val_loader,test_plot_loader,name=name, epochs=epochs,device=device)
+    #         trainer.train()
+    #         trainer.test()
+    #         trainer.save_losses()
 
+
+    model = PricePredictor(minmax_scaler,BATCH_SIZE,train_remember=False,device=device,input_size=FEATURE_SIZE).to(device)
+    train_loader,val_loader,_= make_loaders(batch_size=BATCH_SIZE,seq_len=SEQ_LEN)
+    _,_,test_plot_loader= make_loaders(batch_size=1,seq_len=8)
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=0.001)
+    epochs = 80 
+
+    name = "model_IND_wo"
+    trainer = Traning(model, loss_function, optimizer, train_loader, val_loader,test_plot_loader,name=name, epochs=epochs,device=device)
+    trainer.train()
+    trainer.test()
+    trainer.save_losses()

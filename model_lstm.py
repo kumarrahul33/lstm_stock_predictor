@@ -84,7 +84,7 @@ class Traning():
         self.epochs = epochs
         self.test_losses = []
         self.device = device
-        self.patience = 3
+        self.patience = 5 
         self.test_plot_loader = test_plot_loader
         self.save_name = name 
 
@@ -162,7 +162,8 @@ class Traning():
         # save the plot
         #  get the seq of the first batch
         # seq_,_ = next(iter(self.train_loader))
-        plt.savefig(f"results/{self.save_name}.png")
+        # plt.savefig(f"results/{self.save_name}.png")
+        plt.show()
 
     def save_losses(self):
         # save the test losses

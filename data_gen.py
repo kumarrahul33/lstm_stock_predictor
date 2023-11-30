@@ -90,9 +90,9 @@ def combineMonthly(pathin1, pathin2, outpath="dataset_combined.csv"):
 
     df.to_csv(outpath, index=False)
 
-def prepareFinalDataset(final_name="final_dataset_us.csv"):
-    # df = loadOhlc(DataSources.NIFTY50_OHLC, date_format="%Y-%m-%d")
-    df = loadOhlc(DataSources.SP500_OHLC, date_format="%m/%d/%y")
+def prepareFinalDataset(final_name="final_dataset_ind.csv"):
+    df = loadOhlc(DataSources.NIFTY50_OHLC, date_format="%Y-%m-%d")
+    # df = loadOhlc(DataSources.SP500_OHLC, date_format="%m/%d/%y")
 
     # Technical Indicators
     df = computeMacd(df)
@@ -100,7 +100,8 @@ def prepareFinalDataset(final_name="final_dataset_us.csv"):
     df = computeRsi(df)
     df.drop(['Open','High','Low'],inplace=True,axis=1)
 
-    df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%Y-%m-%d")
+    # df = addData(df, DataSources.US_MACROECONOMIC, date_format = "%Y-%m-%d")
+    df = addData(df, DataSources.IND_MACROECONOMIC, date_format = "%d-%m-%Y")
     df = refineData(df)
 
     df.to_csv(path_join(DataSources.DATA_DIR, final_name),index=False)

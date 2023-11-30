@@ -31,13 +31,22 @@ class StandardScalerLSTM():
 
         self.scale_ = torch.from_numpy(self.scale_).float().unsqueeze(0).to(self.device)
         self.mean_ = torch.from_numpy(self.mean_).float().unsqueeze(0).to(self.device)
+        # self.min_val =  torch.from_numpy(np.min(sample,axis=0)).float().unsqueeze(0).to(self.device)
+        # self.max_val = torch.from_numpy(np.max(sample,axis=0)).float().unsqueeze(0).to(self.device)
         return self
 
     def __call__(self, sample):
         """
             sample : batch_size x sequence_length x feature_size
         """
-        return (sample - self.mean_)/self.scale_
+        # print("in call")
+        # print("sample",sample.shape)
+        # print("min_val",self.min_val.shape) 
+        # print("max_val",self.max_val.shape)
+        # print("scale",self.scale_.shape)
+        # print("mean",self.mean_.shape)
+        # return (sample - self.min_val) / (self.max_val - self.min_val)
+        return (sample - self.mean_) / self.scale_
 
     def inverse_transform(self, sample):
         """Scale the data back to the original representation
@@ -48,4 +57,10 @@ class StandardScalerLSTM():
         # print("self.mean_",self.scale_.shape) # (feature_size,)
 
         # FIXME: A possible bug, when the first element is not the output of the model
+        # return sample * self.scale_[0][0] + self.mean_[0][0]
+        # do min max scaling
+        # print("sample",sample.shape)
+        # print("min_val",self.min_val.shape) 
+        # print("max_val",self.max_val.shape)
+        # return sample * (self.max_val[0][0] - self.min_val[0][0]) + self.min_val[0][0]
         return sample * self.scale_[0][0] + self.mean_[0][0]
