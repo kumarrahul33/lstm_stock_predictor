@@ -12,7 +12,7 @@ from model_lstm import PricePredictor, Traning
 
 SEQ_LEN = 8
 BATCH_SIZE = 16
-FEATURE_SIZE = 8
+FEATURE_SIZE = 6 
 DATASET_PATH = "data/final_dataset_ind_mod.csv"
 
 # Check if CUDA (GPU support) is available

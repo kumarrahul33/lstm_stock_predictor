@@ -10,7 +10,6 @@ from scaler import StandardScalerLSTM
 
 SEQ_LEN = 8
 BATCH_SIZE = 16
-# FEATURE_SIZE = 9
 # ====================== Model ======================== 
 class PricePredictor(nn.Module):
     def __init__(self,scaler,batch_size, input_size,train_remember=False, hidden_layer_size=150, output_size=1, device='cpu'):
